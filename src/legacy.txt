@@ -1,0 +1,78 @@
+const int sinRes = 180;
+u_int8_t sinTable[sinRes]; 
+void calcSineTable(u_int8_t table[]);
+float step = 1.57 / sinRes;
+u_int8_t sinWave1(int freq, u_int8_t amplitude);
+
+void calcSineTable(u_int8_t table[]){
+  for(int i = 0; i < sinRes; i++){
+    table[i] = sin(i*step) * 125;
+  }
+}
+
+u_int8_t sinWave1(int freq, u_int8_t amplitude){
+  int range = 1000000/freq;
+  int point = (prevTime % range) * (520/range);
+
+  if(point < sinRes){
+    return sinTable[point] + 125;
+  }
+  else if(point < sinRes * 2){
+    return sinTable[2*sinRes - point] + 125;
+  }
+  else if(point < sinRes * 3){
+    return sinTable[point - 2*sinRes] * -1 + 125;
+  }
+  else if(point < sinRes *4){
+    return sinTable[4*sinRes - point] * -1 + 125;
+  }
+  else{
+    Serial.println("Value too big");
+    return 0;
+  }
+  
+}
+
+void timing(){
+  float sin1Sum = 0;
+  float sin2Sum = 0;
+  long prevTime = 1000;
+  for(int f = 20; f < 5000; f++){
+    long tStart = 0;
+    long timing = 0;
+
+    //Print Frequency
+    Serial.print(">Frequency:");
+    Serial.println(f);
+
+    //Print timing of Sine1 Func
+    Serial.print(">Sine1:");
+    tStart = micros();
+    sinWave1(f,100);
+    timing = micros()-tStart;
+    Serial.println(timing);
+    sin1Sum += timing;
+
+    //Print timing of Sine2 Func
+    Serial.print(">Sine2:");
+    tStart = micros();
+    sinWave(f,100,0.5,prevTime);
+    timing = micros() - tStart;
+    Serial.println(timing);
+    sin2Sum += timing;
+
+    //Print Average of Sine1 func
+    Serial.print(">Sine1Avg:");
+    Serial.println(sin1Sum/(f-19));
+
+    //Print average of Sine2 Func
+    Serial.print(">Sine2Avg:");
+    Serial.println(sin2Sum/(f-19));
+    
+    //Increase prevTime point
+    prevTime += 1000;
+    
+    delay(100);
+
+  }
+}
