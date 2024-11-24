@@ -9,9 +9,11 @@ adc_continuous_data_t *result = NULL;
 
 SemaphoreHandle_t xMutex = NULL;
 
+
 void ARDUINO_ISR_ATTR adcComplete() {
   adc_coversion_done = true;
 }
+
 
 
 //Timing variables
@@ -101,11 +103,11 @@ void loop() {
   }
 
   if(!CALC_FLAG){
-    xSemaphoreTake (xMutex, portMAX_DELAY);
+    xSemaphoreTake(xMutex, portMAX_DELAY);
     channels[0].prevTime+=45;
-    channels[0].modulator.amp = mod;
+    //channels[0].modulator.amp = mod;
     sig = calculateWave(channels[0]);
-    xSemaphoreGive (xMutex);
+    xSemaphoreGive(xMutex);
     CALC_FLAG = true;
   }
 
@@ -195,23 +197,59 @@ u_int8_t calculateWave(Channel &channel){
   auto& carr = channel.carrier;
   //calculate modulo
   int modulo = int(channel.modulator.waveform(modu.freq,modu.amp,modu.duty,channel.prevTime));
+  modulo+=channel.pitchBend;
 
   //get phase shift for carrier wave
   float m = float((carr.freq + modulo))/carr.freq;
   channel.shiftCounter += (m*45 - 45);
   int newX = channel.prevTime + channel.shiftCounter;
+  // Serial.println(carr.freq);
 
   //return carrier wave
-  return channel.carrier.waveform(carr.freq,carr.amp,carr.duty,newX);
+  channel.output = channel.carrier.waveform(carr.freq,carr.amp,carr.duty,newX);
+  return 0;
 
 }
+
+uint8_t attack(){
+
+}
+
+uint8_t mixer(int numActive){
+  //Leave a buffer room of 4 notes
+  uint8_t totalOut = 0;
+  int divisor = 4;
+  if(numActive > divisor){
+    divisor = numActive;
+  }
+  for(int i =0; i < NUM_CHANNELS; i++){
+    if(channels[i].state != INACTIVE){
+      totalOut += channels[i].output/divisor;
+    }
+  }
+}
+
 void setupChannels(){
-  for(int i = 0; i < 9; i++){
+  //Having all channels share a modulation ocillator
+  Ocillator modOcilator;
+  modOcilator.freq = 10;
+  modOcilator.amp = 0;
+  modOcilator.duty = 0.5;
+  modOcilator.waveform = squareWave;
+
+  //Having all channels share an envelope
+  Envelope envelope;
+  envelope.attack = 0;
+  envelope.decay = 0;
+  envelope.release = 0;
+  envelope.sustain = 0;
+  envelope.ampMax = 0;
+
+  for(int i = 0; i < NUM_CHANNELS; i++){
     //Setup structs
     Channel newChannel;
     Ocillator newOcilator;
-    Ocillator modOcilator;
-    Envelope envelope;
+
     
     //Ocilator
     newOcilator.freq = 440;
@@ -219,26 +257,25 @@ void setupChannels(){
     newOcilator.duty = 0.5;
     newOcilator.waveform = squareWave;
 
-    //mod
-    modOcilator.freq = 10;
-    modOcilator.amp = 0;
-    modOcilator.duty = 0.5;
-    modOcilator.waveform = squareWave;
-
-    //Envelope
-    envelope.attack = 0;
-    envelope.decay = 0;
-    envelope.release = 0;
-    envelope.sustain = 0;
-
     //Channel
     newChannel.carrier = newOcilator;
     newChannel.modulator = modOcilator;
     newChannel.envelope = envelope;
     newChannel.prevTime = 0;
     newChannel.shiftCounter = 0;
+    newChannel.pitchBend = 0;
+    newChannel.state = INACTIVE;
     // Add channel to list
     channels[i] = newChannel;
   }
+
+  //Make sure mixer has its own mod
+  // Ocillator mixerMod;
+  // mixerMod.freq = 10;
+  // mixerMod.amp = 0;
+  // mixerMod.duty = 0.5;
+  // mixerMod.waveform = squareWave;
+  // channels[MIXER_CHANNEL].modulator = mixerMod;
+
 }
 

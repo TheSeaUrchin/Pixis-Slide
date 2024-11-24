@@ -2,12 +2,21 @@
 
 #ifndef CHANNELS_H
 #define CHANNELS_H
+
+#define NUM_CHANNELS 9
+#define MIXER_CHANNEL (NUM_CHANNELS - 1) //Main output channel
+
 typedef u_int8_t (*wave)(int,u_int8_t,float,int);
-typedef u_int8_t (*calc)();
+
+
 
 
 //Channel struct definitions
-
+enum noteState{
+  ON, //becomes on when key is hit and assigned to channel
+  OFF, //becomes off when physical note is released and remains on while the sound is releasing
+  INACTIVE //becomes inactive when note release is finished
+};
 typedef struct{
   int freq;
   u_int8_t amp;
@@ -20,6 +29,7 @@ typedef struct{
   int decay;
   int sustain;
   int release;
+  int ampMax;
 } Envelope;
 
 typedef struct {
@@ -28,6 +38,10 @@ typedef struct {
   Envelope envelope;
   int prevTime;
   float shiftCounter;
+  int pitchBend;
+  noteState state;
+  int output;
+
 } Channel;
 
 #endif
