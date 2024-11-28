@@ -13,16 +13,23 @@ typedef u_int8_t (*wave)(int,u_int8_t,float,int);
 
 //Channel struct definitions
 enum noteState{
-  ON, //becomes on when key is hit and assigned to channel
-  OFF, //becomes off when physical note is released and remains on while the sound is releasing
+  ATTACKING, 
+  DECAYING,
+  RELEASING,
   INACTIVE //becomes inactive when note release is finished
 };
 typedef struct{
   int freq;
-  u_int8_t amp;
+  float amp;
   float duty;
-  wave waveform;
-} Ocillator;
+  wave *waveform;
+  int currentTime;
+  float shiftCounter;
+  // int pitchBend;
+  noteState state;
+  int output;
+  int key;
+} Oscillator;
 
 typedef struct{
   int attack;
@@ -32,16 +39,26 @@ typedef struct{
   int ampMax;
 } Envelope;
 
-typedef struct {
-  Ocillator carrier;
-  Ocillator modulator;
-  Envelope envelope;
-  int prevTime;
-  float shiftCounter;
-  int pitchBend;
-  noteState state;
-  int output;
+typedef struct{
+  int freq;
+  float amp;
+  float duty;
+  wave waveform;
+} LFO;
 
-} Channel;
+// typedef struct {
+//   Ocillator carrier;
+//   Ocillator modulator;
+//   Envelope envelope;
+//   int prevTime;
+//   float shiftCounter;
+//   int pitchBend;
+//   noteState state;
+//   int output;
+//   int key;
+
+// } Channel;
+
+
 
 #endif

@@ -18,19 +18,24 @@
 
 // Control Change Controller Numbers
 #define MOD_WHEEL 0x01
+#define DEBUG_BTN 0x71
+
+#define KEY_LOGGING //uncomment for key logging
 
 // USB Usb;
 // USBHub Hub(&Usb);
 // USBH_MIDI  Midi(&Usb);
 
-typedef struct {
-    Channel* channels;
-    SemaphoreHandle_t xMutex;
-}Params;
-void setupTask(Params* params);
-void mainTask(void *params);
 
-extern SemaphoreHandle_t xMutex;
-extern Channel channels[9];
+void setupTask();
+void mainTask();
+void getMidi();
+
+extern Oscillator channels[9];
+extern LFO lfo;
+extern int pitchBend;
+
+
+
 
 #endif
