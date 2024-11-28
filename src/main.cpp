@@ -254,14 +254,6 @@ void setupChannels(){
     channels[i] = newOcilator;
   }
 
-  //Make sure mixer has its own mod
-  // Ocillator mixerMod;
-  // mixerMod.freq = 10;
-  // mixerMod.amp = 0;
-  // mixerMod.duty = 0.5;
-  // mixerMod.waveform = squareWave;
-  // channels[MIXER_CHANNEL].modulator = mixerMod;
-
 }
 
 void resetChannel(Oscillator &channel){
