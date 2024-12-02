@@ -155,6 +155,7 @@ u_int8_t calculateWave(Oscillator &channel){
 
   //calculate modulo
   int modulo = int(lfo.waveform(lfo.freq,lfo.amp,lfo.duty,channel.currentTime));
+  modulo -= (lfo.amp/2);
   modulo+=pitchBend;
 
   //get phase shift for carrier wave
@@ -209,6 +210,8 @@ uint8_t mixer(int numActive){
   //Leave a buffer room of 4 notes
   uint8_t totalOut = 0;
   int divisor = 4;
+  
+  //if there are more than 4 active notes
   if(numActive > divisor){
     divisor = numActive;
   }

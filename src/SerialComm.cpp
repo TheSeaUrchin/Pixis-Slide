@@ -27,37 +27,35 @@ void interpertMidi(uint8_t bufMidi[4]);
 
 void mainTask(void *params){
 
-
-    //Channel* channels = ((Params*) params)->channels;
-    // SemaphoreHandle_t xMutex = ((Params*) params)->xMutex;
-    //Setup
+    //try to connect to the USB device
     while (Usb.Init() == -1) {
         delay( 200 );
         Serial.println("Connection Failed");
     }
 
     while(true){
-        Usb.Task();
+        Usb.Task(); //poll the USB device
         if(Midi){
             uint8_t bufMidi[4];
             uint16_t  rcvd;
             //If we recieved data from the midi controller
             if (Midi.RecvData( &rcvd,  bufMidi) == 0 ){
                 xSemaphoreTake (xMutex, portMAX_DELAY);
+                //critical section
+                midiQueue.add(bufMidi);
                 if(rcvd >4){
                     Serial.print("Rec: ");
                     Serial.print(rcvd);
                 }
-                midiQueue.add(bufMidi);
                 xSemaphoreGive (xMutex);
             }
-
         }
         delay(1);
-        yield();
+        yield(); //Prevent Crash 
     }
 
 }
+
 
 
 void setupTask(){
