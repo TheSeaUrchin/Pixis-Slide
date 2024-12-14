@@ -1,6 +1,7 @@
 #include "waveforms.h"
 
-u_int8_t squareWave(int freq, u_int8_t amplitude,float duty, int prevTime){
+u_int8_t squareWave(int freq, u_int8_t amplitude,int duty, int prevTime){
+  float d = float(duty)/10;
   if(freq == 0){
     return 0; //prevent division by 0
   }
@@ -8,7 +9,7 @@ u_int8_t squareWave(int freq, u_int8_t amplitude,float duty, int prevTime){
   int point = prevTime % period; //Calculate the point relative to the period
 
   int8_t retVal = 0;
-  if(point < period * duty){
+  if(point < period * d){
     retVal = amplitude; //Set return value to the amplitude if point is within the duty cycle time
   }
   return retVal;
@@ -17,7 +18,7 @@ u_int8_t squareWave(int freq, u_int8_t amplitude,float duty, int prevTime){
 
 
 
-u_int8_t sinWave(int freq, u_int8_t amplitude, float duty, int prevTime){
+u_int8_t sinWave(int freq, u_int8_t amplitude, int duty, int prevTime){
   int period = 1000000/freq; // convert frequency to period in microseconds
   
 
@@ -27,7 +28,7 @@ u_int8_t sinWave(int freq, u_int8_t amplitude, float duty, int prevTime){
   return sin((6.28/period) * (point))*multiplier + multiplier;
 }
 
-u_int8_t sawtooth(int freq, u_int8_t amplitude,float duty, int prevTime){
+u_int8_t sawtooth(int freq, u_int8_t amplitude,int duty, int prevTime){
   int period = 1000000/freq;
   int point = prevTime % period;
 
@@ -38,7 +39,7 @@ u_int8_t sawtooth(int freq, u_int8_t amplitude,float duty, int prevTime){
 
 }
 
-u_int8_t triangle(int freq, u_int8_t amplitude, float duty, int prevTime){
+u_int8_t triangle(int freq, u_int8_t amplitude, int duty, int prevTime){
   
   int period = 1000000/freq; // convert frequency to period in microseconds
   int point = prevTime % period; // get point relative to cycle

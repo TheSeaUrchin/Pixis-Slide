@@ -1,11 +1,17 @@
 #include "SerialComm.h"
 #include <MidiQueue.h>
+#include "UI.h"
 
 void checkMemory(void);
-int noteToF(int note);
 void printKeyLog();
 USB Usb;
 USBH_MIDI  Midi(&Usb);
+
+// extern ESP32Encoder encoder1;
+// extern ESP32Encoder encoder2;
+// extern ESP32Encoder encoder3;
+// extern ESP32Encoder encoder4;
+
 
 struct logging{
     bool noteOn;
@@ -19,38 +25,56 @@ struct logging *keyLog = keyLogHead;
 int logLen = 0;
 
 SemaphoreHandle_t xMutex = NULL;
+SemaphoreHandle_t encoderMutex = NULL;
 
 
 MidiQueue midiQueue = MidiQueue();
 void interpertMidi(uint8_t bufMidi[4]);
 
-
+bool usbConnected = false;
+int t = millis();
 void mainTask(void *params){
 
+
     //try to connect to the USB device
-    while (Usb.Init() == -1) {
-        delay( 200 );
-        Serial.println("Connection Failed");
+    if (Usb.Init() == -1) {
+        usbConnected = false;
+    }
+    else{
+        usbConnected = true;
     }
 
     while(true){
-        Usb.Task(); //poll the USB device
-        if(Midi){
-            uint8_t bufMidi[4];
-            uint16_t  rcvd;
-            //If we recieved data from the midi controller
-            if (Midi.RecvData( &rcvd,  bufMidi) == 0 ){
-                xSemaphoreTake (xMutex, portMAX_DELAY);
-                //critical section
-                midiQueue.add(bufMidi);
-                if(rcvd >4){
-                    Serial.print("Rec: ");
-                    Serial.print(rcvd);
+        if(usbConnected){
+            Usb.Task(); //poll the USB device
+            if(Midi){
+                uint8_t bufMidi[4];
+                uint16_t  rcvd;
+                //If we recieved data from the midi controller
+                if (Midi.RecvData( &rcvd,  bufMidi) == 0 ){
+                    xSemaphoreTake (xMutex, portMAX_DELAY);
+                    //critical section
+                    midiQueue.add(bufMidi);
+                    if(rcvd >4){
+                        Serial.print("Rec: ");
+                        Serial.print(rcvd);
+                    }
+                    xSemaphoreGive (xMutex);
                 }
-                xSemaphoreGive (xMutex);
             }
         }
         delay(1);
+        //updating encoders (takes a surprisingly long time)
+        // if(millis()-t > 1000){
+        //     t = millis();
+        //     xSemaphoreTake (encoderMutex, portMAX_DELAY);
+        //     for(int i = 0; i < 4; i++){
+        //         items[i].currentEncoderCnt = items[i].encoder->getCount()/2;
+        //     }
+        //     xSemaphoreGive(encoderMutex);
+
+        // }
+
         yield(); //Prevent Crash 
     }
 
@@ -60,6 +84,7 @@ void mainTask(void *params){
 
 void setupTask(){
       xMutex = xSemaphoreCreateMutex();
+      encoderMutex = xSemaphoreCreateMutex();
       xTaskCreatePinnedToCore (
         mainTask,
         "SerialTask",
@@ -107,8 +132,10 @@ void interpertMidi(uint8_t bufMidi[4]){
     //Handle Midi Message
                 
     if(bufMidi[0] == NOTE_ON){
+        Serial.println("NOTE_ON");
         int note = noteToF(bufMidi[2]);
         int channelNum = 0;
+
 
         //Select note from notes to activate
         for(int i = 0; i < NUM_CHANNELS; i++){
@@ -142,6 +169,7 @@ void interpertMidi(uint8_t bufMidi[4]){
         for(int i = 0; i < NUM_CHANNELS; i++){
             if((channels[i].key == bufMidi[2]) && (channels[i].state != INACTIVE && channels[i].state != RELEASING)){
                 channels[i].state = RELEASING;
+                channels[i].relAmp = channels[i].amp;
                 channelNum = i;
             }
         }
@@ -180,7 +208,7 @@ void interpertMidi(uint8_t bufMidi[4]){
     else if(bufMidi[0] == PITCH_BEND){
         int bend = bufMidi[3];
         bend-=64;
-        pitchBend = bend; //TODO: make pitchbend shared
+        globalVals.pitchBend = bend; //TODO: make pitchbend shared
     }
 }
 

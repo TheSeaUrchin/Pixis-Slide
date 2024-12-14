@@ -20,7 +20,7 @@
 #define MOD_WHEEL 0x01
 #define DEBUG_BTN 0x71
 
-#define KEY_LOGGING //uncomment for key logging
+//#define KEY_LOGGING //uncomment for key logging
 
 // USB Usb;
 // USBHub Hub(&Usb);
@@ -33,7 +33,10 @@ void getMidi();
 
 extern Oscillator channels[9];
 extern LFO lfo;
-extern int pitchBend;
+extern GlobalVals globalVals;
+
+int noteToF(int note);
+
 
 
 

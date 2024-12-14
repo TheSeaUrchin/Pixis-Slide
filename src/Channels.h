@@ -6,7 +6,7 @@
 #define NUM_CHANNELS 9
 #define MIXER_CHANNEL (NUM_CHANNELS - 1) //Main output channel
 
-typedef u_int8_t (*wave)(int,u_int8_t,float,int);
+typedef u_int8_t (*wave)(int,u_int8_t,int,int);
 
 
 
@@ -21,7 +21,7 @@ enum noteState{
 typedef struct{
   int freq;
   float amp;
-  float duty;
+  int duty;
   wave *waveform;
   int currentTime;
   float shiftCounter;
@@ -29,6 +29,7 @@ typedef struct{
   noteState state;
   int output;
   int key;
+  float relAmp;
 } Oscillator;
 
 typedef struct{
@@ -36,15 +37,29 @@ typedef struct{
   int decay;
   int sustain;
   int release;
-  int ampMax;
 } Envelope;
 
 typedef struct{
   int freq;
-  float amp;
-  float duty;
-  wave waveform;
+  int amp;
+  int duty;
+  int waveform;
 } LFO;
+
+typedef struct{
+  int waveform;
+  int ampMax;
+  int pitchBend;
+  int duty;
+} GlobalVals;
+
+typedef struct{
+  int numNotes;
+  int spacing;
+  int mode;
+  int currentVal;
+  int currentOut;
+} Strip;
 
 // typedef struct {
 //   Ocillator carrier;
