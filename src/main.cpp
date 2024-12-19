@@ -106,7 +106,8 @@ void setup() {
   lfo.freq = 5;
   lfo.duty = 5;
   // channels[0].state = ATTACKING;
-  // channels[0].freq = 262;
+  //channels[0].freq = 262;
+  channels[0].key = 60;
 
   setupScreens();
   setupUI();
@@ -126,35 +127,35 @@ void loop() {
   loopStart = true;
   if(adc_coversion_done){
     analogContinuousRead(&result, 0);
-    // int val = float(result[0].avg_read_raw);
-    // if(val == 0){
-    //   if(offCount < 5){
-    //     val = strip.currentVal;
-    //     offCount++;
-    //   }
+    int val = float(result[0].avg_read_raw);
+    if(val == 0){
+      if(offCount < 5){
+        val = strip.currentVal;
+        offCount++;
+      }
 
-    // }
-    // else{
-    //   offCount = 0;
-    // }
-    // if(abs(strip.currentVal - val) > 40){
-    //   if(strip.currentOut == 0){
-    //     channels[0].state = ATTACKING;
-    //   }
-    //   int out = calculateGliss(val);
-    //   //Serial.println(out);
-    //   if(out == 0){
-    //     channels[0].state = RELEASING;
-    //   }
-    //   else{
-    //     channels[0].freq = out;
-    //   }
+    }
+    else{
+      offCount = 0;
+    }
+    if(abs(strip.currentVal - val) > 40){
+      if(strip.currentOut == 0){
+        channels[0].state = ATTACKING;
+      }
+      int out = calculateGliss(val);
+      //Serial.println(out);
+      if(out == 0){
+        channels[0].state = RELEASING;
+      }
+      else{
+        channels[0].freq = out;
+      }
 
-    //   strip.currentVal = val;
-    //   strip.currentOut = out;
+      strip.currentVal = val;
+      strip.currentOut = out;
 
-    //   // pitchBend = val;
-    // }
+      // pitchBend = val;
+    }
     // else{
     //   pitchBend = 0;
     // }
@@ -294,7 +295,7 @@ uint8_t mixer(int numActive){
 void setupChannels(){
   globalVals.ampMax = 255;
   globalVals.pitchBend = 0;
-  globalVals.waveform = SINE;
+  globalVals.waveform = SQUARE;
   globalVals.duty = 5;
   //Having all channels share a modulation ocillator
   lfo.freq = 10;
@@ -353,19 +354,16 @@ int calculateGliss(int val){
     return 0;
   }
   if(val % int(noteSection) <= noteSize && val % int(noteSection) != 0){
-    
+    int origin = 60;
     if(channels[0].key != 0){
-      int noteNum = val/noteSection;
-      int note = channels[0].key + ((noteNum/7)*12) + majorScale[noteNum % 7];
-      // return noteToF(channels[0].key +(val/noteSection) + 1 );
-      return noteToF(note);
+      origin = channels[0].key;
     }
-    else{
-      if(val == 0){
-        return 0;
-      }
-      return noteToF(69 +(val/noteSection) + 1 );
-    }
+
+    int noteNum = val/noteSection;
+    int note = channels[0].key + ((noteNum/5)*12) + pentaMajor2[noteNum % 5];
+    // return noteToF(channels[0].key +(val/noteSection) + 1 );
+    return noteToF(note);
+
     
   }
   else{
@@ -396,7 +394,7 @@ void setupScreens(){
   attachVar(ENVscr,0,&envelope.attack,0,1000);
   attachVar(ENVscr,1,&envelope.decay,0,3000);
   attachVar(ENVscr,2,&envelope.sustain,0,255);
-  attachVar(ENVscr,3,&envelope.release,0,5000);
+  attachVar(ENVscr,3,&envelope.release,0,3000);
 
 }
 

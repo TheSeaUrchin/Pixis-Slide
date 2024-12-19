@@ -1,6 +1,6 @@
 #include "SerialComm.h"
 #include <MidiQueue.h>
-#include "UI.h"
+
 
 void checkMemory(void);
 void printKeyLog();
@@ -55,26 +55,15 @@ void mainTask(void *params){
                     xSemaphoreTake (xMutex, portMAX_DELAY);
                     //critical section
                     midiQueue.add(bufMidi);
-                    if(rcvd >4){
-                        Serial.print("Rec: ");
-                        Serial.print(rcvd);
-                    }
+                    // if(rcvd >4){
+                    //     Serial.print("Rec: ");
+                    //     Serial.print(rcvd);
+                    // }
                     xSemaphoreGive (xMutex);
                 }
             }
         }
         delay(1);
-        //updating encoders (takes a surprisingly long time)
-        // if(millis()-t > 1000){
-        //     t = millis();
-        //     xSemaphoreTake (encoderMutex, portMAX_DELAY);
-        //     for(int i = 0; i < 4; i++){
-        //         items[i].currentEncoderCnt = items[i].encoder->getCount()/2;
-        //     }
-        //     xSemaphoreGive(encoderMutex);
-
-        // }
-
         yield(); //Prevent Crash 
     }
 
@@ -84,7 +73,6 @@ void mainTask(void *params){
 
 void setupTask(){
       xMutex = xSemaphoreCreateMutex();
-      encoderMutex = xSemaphoreCreateMutex();
       xTaskCreatePinnedToCore (
         mainTask,
         "SerialTask",
@@ -131,7 +119,7 @@ void getMidi(){
 void interpertMidi(uint8_t bufMidi[4]){
     //Handle Midi Message
                 
-    if(bufMidi[0] == NOTE_ON){
+    if(bufMidi[0] == NOTE_ON && bufMidi[3] != 0){
         Serial.println("NOTE_ON");
         int note = noteToF(bufMidi[2]);
         int channelNum = 0;
@@ -163,7 +151,7 @@ void interpertMidi(uint8_t bufMidi[4]){
 
     }
 
-    else if(bufMidi[0] == NOTE_OFF){
+    else if(bufMidi[0] == NOTE_OFF || bufMidi[3] == 0){
 
         int channelNum = 0;
         for(int i = 0; i < NUM_CHANNELS; i++){
