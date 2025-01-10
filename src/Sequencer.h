@@ -61,8 +61,6 @@ MIDI AxelFMidi[] = {
 };
 Song AxelF = {46 , AxelFMidi};
 
-
-
 int MIDITime = 0;
 int midiNote = 0;
 void beginSequence(){

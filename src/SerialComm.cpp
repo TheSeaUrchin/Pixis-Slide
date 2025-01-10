@@ -77,12 +77,7 @@ void mainTask(void *params){
         delay(1);
         yield(); //Prevent Crash 
     }
-
-
-
 }
-
-
 
 void setupTask(){
       xMutex = xSemaphoreCreateMutex();
@@ -136,7 +131,6 @@ void interpertMidi(uint8_t bufMidi[4]){
         
         int note = noteToF(bufMidi[2]);
         int channelNum = 0;
-
 
         //Select note from notes to activate
         for(int i = 0; i < NUM_CHANNELS; i++){
@@ -249,6 +243,7 @@ void printKeyLog(){
     }
 }
 
+//For Debugging
 void IRAM_ATTR buttonISR(){
     if(millis() - pTime < DEBUG_DBNC){
         return;
