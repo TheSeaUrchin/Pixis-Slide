@@ -9,6 +9,8 @@ void updateUI();
 enum ItemType{
   GRAPH,
   BAR,
+  TEXT,
+  NUM,
   NONE
 };
 

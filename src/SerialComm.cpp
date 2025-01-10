@@ -1,17 +1,13 @@
 #include "SerialComm.h"
 #include <MidiQueue.h>
+#include "Sequencer.h"
 
+#define BTN_SIDE 39
+#define DEBUG_DBNC 1000
 
-void checkMemory(void);
 void printKeyLog();
 USB Usb;
 USBH_MIDI  Midi(&Usb);
-
-// extern ESP32Encoder encoder1;
-// extern ESP32Encoder encoder2;
-// extern ESP32Encoder encoder3;
-// extern ESP32Encoder encoder4;
-
 
 struct logging{
     bool noteOn;
@@ -25,15 +21,20 @@ struct logging *keyLog = keyLogHead;
 int logLen = 0;
 
 SemaphoreHandle_t xMutex = NULL;
-SemaphoreHandle_t encoderMutex = NULL;
+extern bool mono;
 
 
 MidiQueue midiQueue = MidiQueue();
 void interpertMidi(uint8_t bufMidi[4]);
+void buttonISR();
 
 bool usbConnected = false;
 int t = millis();
+bool sequencing = false;
+int pTime = 0;
 void mainTask(void *params){
+
+    attachInterrupt(BTN_SIDE,buttonISR,RISING);
 
 
     //try to connect to the USB device
@@ -44,6 +45,7 @@ void mainTask(void *params){
         usbConnected = true;
     }
 
+
     while(true){
         if(usbConnected){
             Usb.Task(); //poll the USB device
@@ -52,20 +54,31 @@ void mainTask(void *params){
                 uint16_t  rcvd;
                 //If we recieved data from the midi controller
                 if (Midi.RecvData( &rcvd,  bufMidi) == 0 ){
-                    xSemaphoreTake (xMutex, portMAX_DELAY);
                     //critical section
+                    xSemaphoreTake (xMutex, portMAX_DELAY);
                     midiQueue.add(bufMidi);
-                    // if(rcvd >4){
-                    //     Serial.print("Rec: ");
-                    //     Serial.print(rcvd);
-                    // }
                     xSemaphoreGive (xMutex);
                 }
+            }
+            
+        }
+        else if(sequencing){
+            if(sequenceNext()){
+                uint8_t bufMidi[4];
+                sequence(bufMidi);
+                //critical section
+                xSemaphoreTake (xMutex, portMAX_DELAY);
+                midiQueue.add(bufMidi);
+                xSemaphoreGive (xMutex);
+
+
             }
         }
         delay(1);
         yield(); //Prevent Crash 
     }
+
+
 
 }
 
@@ -120,14 +133,14 @@ void interpertMidi(uint8_t bufMidi[4]){
     //Handle Midi Message
                 
     if(bufMidi[0] == NOTE_ON && bufMidi[3] != 0){
-        Serial.println("NOTE_ON");
+        
         int note = noteToF(bufMidi[2]);
         int channelNum = 0;
 
 
         //Select note from notes to activate
         for(int i = 0; i < NUM_CHANNELS; i++){
-            if(channels[i].state == INACTIVE){
+            if(channels[i].state == INACTIVE || mono){
                 channels[i].state = ATTACKING;
                 channels[i].freq = note;
                 channels[i].key = bufMidi[2];
@@ -151,9 +164,19 @@ void interpertMidi(uint8_t bufMidi[4]){
 
     }
 
-    else if(bufMidi[0] == NOTE_OFF || bufMidi[3] == 0){
+    //Some midi Controllers set velocity to 0 to turn off note, checking 3rd byte for velocity
+
+    else if(bufMidi[0] == NOTE_OFF || bufMidi[3] == 0){ 
 
         int channelNum = 0;
+        //If mono, just turn off note 0
+        if(mono){
+            channels[0].state = RELEASING;
+            channels[0].relAmp = channels[0].amp;
+            channelNum = 0;
+            return;
+        }
+        
         for(int i = 0; i < NUM_CHANNELS; i++){
             if((channels[i].key == bufMidi[2]) && (channels[i].state != INACTIVE && channels[i].state != RELEASING)){
                 channels[i].state = RELEASING;
@@ -202,16 +225,6 @@ void interpertMidi(uint8_t bufMidi[4]){
 
 
 
-void checkMemory() {
-
-  size_t free_heap = heap_caps_get_free_size(MALLOC_CAP_DEFAULT);
-
-  Serial.print("Free heap memory: "); 
-
-  Serial.println(free_heap); 
-
-}
-
 int noteToF(int note){
     float n = (float(note)-69)/12;
     return (pow(2,n) * 440);
@@ -236,5 +249,14 @@ void printKeyLog(){
     }
 }
 
-
+void IRAM_ATTR buttonISR(){
+    if(millis() - pTime < DEBUG_DBNC){
+        return;
+    }
+    Serial.println("Interrupt");
+    pTime = millis();
+    sequencing = true;
+    beginSequence();
+    
+}
 
