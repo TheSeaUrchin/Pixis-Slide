@@ -1,4 +1,15 @@
 #include "waveforms.h"
+#define TABLE_SIZE 4000
+
+int sinTable[TABLE_SIZE];
+
+void makeSineTable(){
+  for(int i = 0; i < TABLE_SIZE;i++){
+    float point = (float(i)/TABLE_SIZE);
+    //floor to 2 decimal places
+    sinTable[i] = int(sin((6.28) * (point))*100);
+  }
+}
 
 u_int8_t squareWave(int freq, u_int8_t amplitude,int duty, int prevTime){
   float d = float(duty)/10;
@@ -27,6 +38,18 @@ u_int8_t sinWave(int freq, u_int8_t amplitude, int duty, int prevTime){
 
   return sin((6.28/period) * (point))*multiplier + multiplier;
 }
+
+u_int8_t sinWaveTable(int freq, u_int8_t amplitude, int duty, int prevTime){
+  int startTime = micros();
+  int period = 1000000/freq; // convert frequency to period in microsecond
+  int multiplier = amplitude/2;   //Shift sine wave so minimum is 0
+
+  int point = prevTime % period; //get point in relation to period
+  float retVal = sinTable[(TABLE_SIZE*point)/period]*multiplier;
+  // int retVal = 0;
+  return retVal/100 + multiplier;
+}
+
 
 u_int8_t sawtooth(int freq, u_int8_t amplitude,int duty, int prevTime){
   int period = 1000000/freq;

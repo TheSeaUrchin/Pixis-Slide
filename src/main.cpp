@@ -13,6 +13,9 @@ int majorScale2[] = {0,2,4,5,7,9,11,12};
 int minorScale[] = {2,2,2,1,2,2,1};
 int pentaMajor[] = {2,2,3,2,3};
 int pentaMajor2[] = {0,2,4,7,9,12};
+int pentaMinor[] = {0,3,5,7,10,12};
+
+bool mono = false;
 
 
 
@@ -27,7 +30,7 @@ void ARDUINO_ISR_ATTR adcComplete() {
 //Timing variables
 #define PRE_SCALER 80 // ABP_CLOCK frequency is 80Mhz, so a prescalar of 80 will make the timing units 1micro second
 // #define SAMPLING_RATE 44 //44kHz
-#define SAMPLING_PERIOD 60 //sampling period in microseconds
+#define SAMPLING_PERIOD 45 //sampling period in microseconds
 
 // int samplingPeriod = float(1/SAMPLING_RATE) * 1000; //in microseconds
 Oscillator channels[9];
@@ -77,16 +80,13 @@ int offCount = 0;
 hw_timer_t *Timer0_Cfg = NULL;
 
 
-wave waves[] = {squareWave,triangle,sawtooth,sinWave};
+wave waves[] = {squareWave,triangle,sawtooth,sinWaveTable};
 
 //linking variables with UI
 
 
 void IRAM_ATTR Timer0_ISR()
 {
-  // if(!CALC_FLAG && loopStart){
-
-  // }
   CALC_FLAG = false;
   dacWrite(DAC1,sig);
 }
@@ -100,15 +100,15 @@ void setup() {
 
 
   setupChannels();
-  //for now, manually setup channel
+
+  //initial params
   lfo.waveform = TRIANGLE;
   lfo.amp = 0;
   lfo.freq = 5;
   lfo.duty = 5;
-  // channels[0].state = ATTACKING;
-  //channels[0].freq = 262;
-  channels[0].key = 60;
+  channels[0].key = 65;
 
+  makeSineTable();
   setupScreens();
   setupUI();
   setupTask();
@@ -143,8 +143,8 @@ void loop() {
         channels[0].state = ATTACKING;
       }
       int out = calculateGliss(val);
-      //Serial.println(out);
       if(out == 0){
+        channels[0].relAmp = channels[0].amp;
         channels[0].state = RELEASING;
       }
       else{
@@ -154,11 +154,8 @@ void loop() {
       strip.currentVal = val;
       strip.currentOut = out;
 
-      // pitchBend = val;
     }
-    // else{
-    //   pitchBend = 0;
-    // }
+
     adc_coversion_done = false;
   }
 
@@ -174,16 +171,13 @@ void loop() {
         channels[i].currentTime+=SAMPLING_PERIOD;
         if(channels[i].state == ATTACKING){
           attack(channels[i]);
-          //decay(channels[i]);
-          // channels[i].amp = 255;
+
         }
         else if(channels[i].state == DECAYING){
           decay(channels[i]);
         }
         else{
           release(channels[i]);
-          // channels[i].amp = 0;
-          //resetChannel(channels[i]);
         }
         calculateWave(channels[i]);
         numActive++;
@@ -191,13 +185,9 @@ void loop() {
     }
     //Calculate output
     sig = mixer(numActive);
-    // sig = channels[0].output;
 
-    //xSemaphoreGive(xMutex);
-    // int timeStart = micros();
     updateUI();
     CALC_FLAG = true;
-    // Serial.println(micros()-timeStart);
 
   }
   
@@ -250,8 +240,6 @@ void decay(Oscillator &channel){
   }
   if(channel.amp > envelope.sustain){
     channel.amp -= float(SAMPLING_PERIOD * globalVals.ampMax)/(envelope.decay*1000);
-    // int b = (channel.envelope.sustain -channel.envelope.ampMax) * (channel.prevTime - channel.envelope.attack);
-    // channel.carrier.amp = (float(b)/channel.envelope.decay) - channel.envelope.ampMax;
     if(channel.amp < envelope.sustain){
       channel.amp = envelope.sustain;
     }
@@ -259,10 +247,16 @@ void decay(Oscillator &channel){
 }
 
 void release(Oscillator &channel){
-  if(envelope.release == 0){
-    resetChannel(channel);
+  if(envelope.release == 0){ 
+    if(channel.output == 0){
+      channel.amp = 0;
+      resetChannel(channel);
+    }
     return;
   }
+
+
+
   if(channel.amp > 0){
     channel.amp -= float(SAMPLING_PERIOD * channel.relAmp)/(envelope.release*1000);
     if(channel.amp < 0){
@@ -318,7 +312,7 @@ void setupChannels(){
     
     //Ocilator
     newOcilator.freq = 440;
-    newOcilator.amp = 255;
+    newOcilator.amp = 0;
     newOcilator.duty = 0.5;
     *(newOcilator.waveform) = squareWave;
 
@@ -341,7 +335,6 @@ void setupChannels(){
 }
 
 void resetChannel(Oscillator &channel){
-  channel.key = 0;
   channel.shiftCounter = 0;
   channel.currentTime = 0;
   channel.state = INACTIVE;
@@ -360,8 +353,7 @@ int calculateGliss(int val){
     }
 
     int noteNum = val/noteSection;
-    int note = channels[0].key + ((noteNum/5)*12) + pentaMajor2[noteNum % 5];
-    // return noteToF(channels[0].key +(val/noteSection) + 1 );
+    int note = channels[0].key + ((noteNum/5)*12) + pentaMinor[noteNum % 5];
     return noteToF(note);
 
     
@@ -387,7 +379,7 @@ void setupScreens(){
   //LFO Screen
   attachVar(LFOscr,0,&lfo.waveform,0,4);
   attachVar(LFOscr,1,&lfo.freq,0,20);
-  attachVar(LFOscr,2,&lfo.amp,0,255);
+  attachVar(LFOscr,2,&lfo.amp,0,30);
   attachVar(LFOscr,3,&lfo.duty,0,10);
 
   //Env Screen
@@ -397,9 +389,3 @@ void setupScreens(){
   attachVar(ENVscr,3,&envelope.release,0,3000);
 
 }
-
-// bool stripPressed(int reading){
-//   if(strip.currentVal != 0 && reading == 0){
-//     strip.currentVal
-//   }
-// }
