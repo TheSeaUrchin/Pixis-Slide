@@ -1,4 +1,3 @@
-
 #include <LiquidCrystal_I2C.h>
 #include "customChars.h"
 #include "SerialComm.h"
@@ -10,26 +9,16 @@
 #define BUTTON_RIGHT 35
 #define DEBOUNCE 100
 
-
- 
-// #define CLK 12 // CLK ENCODER 
-// #define DT 13 // DT ENCODER 
- 
 ESP32Encoder encoder1;
 ESP32Encoder encoder2;
 ESP32Encoder encoder3;
 ESP32Encoder encoder4;
 
-
-
-
 LiquidCrystal_I2C lcd(0x27, 21, 22);
 int currentScreen = 1;
 extern SemaphoreHandle_t encoderMutex;
 
-
-
-
+// Screen Items
 Item items[4] = {
   {GRAPH,0,1,"WAVE",&encoder1,0,0},
   {BAR,6,1,"FRQ",&encoder2,0,0},
@@ -37,11 +26,9 @@ Item items[4] = {
   {BAR,16,1,"PWM",&encoder4,0,0}
 };
 
-
 Screen LFOscr;
 Screen OSCscr;
 Screen ENVscr;
-
 Screen *screens[] = {&OSCscr,&LFOscr,&ENVscr};
 
 long encoderCnt = 0;
@@ -49,6 +36,7 @@ long value = 0;
 bool newScreen = false;
 int pressTime = 0;
 int encoderTimer = 0;
+
 void makeGraph(int name);
 void printGraph(int curx, int cury, int name,String caption);
 void makeBar();
@@ -62,54 +50,44 @@ void drawScreen(Screen &screen);
 void setScreen(Screen &screen,int pos,ItemType itemType,String caption);
 void buttonInt();
 void printHeader();
+
+
 void setupUI(){
   lcd.init();
   lcd.backlight();
   lcd.clear();
   //top menu
-
-
   makeBar();
   ScreenSetup();
+
+  // Button settup
   pinMode(BUTTON_DOWN,INPUT);
   pinMode(BUTTON_UP,INPUT);
   pinMode(BUTTON_LEFT,INPUT);
   pinMode(BUTTON_RIGHT,INPUT);
   
-
-
   lcd.setCursor(0,0);
   lcd.cursor_on();
+ 
   attachInterrupt(BUTTON_LEFT,buttonInt,RISING);
   attachInterrupt(BUTTON_RIGHT,buttonInt,RISING);
 
 
-  //encoder Stuff
-
-  //encoder1.useInternalWeakPullResistors = puType::up;
-  // encoder1.isrServiceCpuCore = 0;
+  //encoder setup
   encoder1.attachHalfQuad ( 16, 4);
   encoder1.setCount ( 0 );
 
-
   encoder2.useInternalWeakPullResistors = puType::up;
-  // encoder2.isrServiceCpuCore = 0;
   encoder2.attachHalfQuad ( 13, 12);
   encoder2.setCount ( 0 );
 
-
   encoder3.useInternalWeakPullResistors = puType::up;
-  // encoder3.isrServiceCpuCore = 0;
   encoder3.attachHalfQuad ( 15, 14);
   encoder3.setCount ( 0 );
 
-
   encoder4.useInternalWeakPullResistors = puType::up;
-  // encoder4.isrServiceCpuCore = 0;
   encoder4.attachHalfQuad ( 27, 26);
   encoder4.setCount ( 0 );
-
-
 
   drawScreen(*screens[currentScreen]);
   lcd.setCursor(4*currentScreen,0);
@@ -128,9 +106,8 @@ void updateUI(){
   encoderTimer = millis();
   for(int i = 0; i < screens[currentScreen]->numElements; i++){
     int update = updateValue(items[i]);
-    //int update = 0;
-    if(update != 0){
 
+    if(update != 0){
       if(items[i].itemType == GRAPH){
         if(update > 0 ){
           if(items[i].value == 3){
@@ -180,7 +157,6 @@ void makeBar(){
   }
 }
 
-
 void printHeader(){
   lcd.setCursor(0,0);
   lcd.print("OSC ");
@@ -189,6 +165,7 @@ void printHeader(){
   lcd.print("FX ");
   lcd.print("ETC");
 }
+
 void printGraph(int curx, int cury, int name,String caption){
   makeGraph(name);
   lcd.setCursor(curx,cury);
@@ -203,7 +180,6 @@ void printGraph(int curx, int cury, int name,String caption){
   lcd.write(3);
   lcd.setCursor(curx,cury+2);
   lcd.print(caption);
-
 }
 
 void printBar(int curx, int cury,int num,String caption){
@@ -246,16 +222,12 @@ void printBar(int curx, int cury,int num,String caption){
   lcd.print(caption);
   lcd.setCursor(curx+3,cury);
 
-
 }
 
 int updateValue(struct Item &item){
   int retval = 0;
-  //int currentEncoder = item.prevEncoderVal;
-  // xSemaphoreTake (encoderMutex, portMAX_DELAY);
-  int currentEncoder =   item.encoder->getCount()/2;
-  // xSemaphoreGive(encoderMutex);
 
+  int currentEncoder =   item.encoder->getCount()/2;
 
   if(item.prevEncoderVal != currentEncoder){
     if(item.prevEncoderVal > currentEncoder){
@@ -269,17 +241,16 @@ int updateValue(struct Item &item){
   }
   return retval;
 }
+
 void setScreen(Screen &screen,int pos,ItemType itemType,String caption){
   screen.Type[pos] = itemType;
   screen.caption[pos] = caption;
 }
 void ScreenSetup(){
-  //setup stuff
   setScreen(LFOscr,0,GRAPH,"WAVE");
   setScreen(LFOscr,1,BAR,"FRQ");
   setScreen(LFOscr,2,BAR,"AMP");
   setScreen(LFOscr,3,BAR,"PW");
-
   LFOscr.numElements = 4;
 
   setScreen(ENVscr,0,BAR,"ATK");
@@ -293,11 +264,7 @@ void ScreenSetup(){
   setScreen(OSCscr,2,BAR,"PW");
 
   OSCscr.numElements = 3;
-
-
 }
-
-
 
 void drawScreen(Screen &screen){
     lcd.clear();
@@ -315,7 +282,6 @@ void drawScreen(Screen &screen){
             items[i].value = *items[i].valueBind;
         }
 
-
         if(items[i].itemType == GRAPH){
             printGraph(items[i].x,items[i].y,items[i].value,items[i].caption);
         }
@@ -326,7 +292,6 @@ void drawScreen(Screen &screen){
     lcd.setCursor(currentScreen*4,0);
 }
 
-
 void bindUI(Screen &screen, int element){
     items[element].valueBind = screen.vars[element];
     items[element].min = screen.min[element];
@@ -334,7 +299,6 @@ void bindUI(Screen &screen, int element){
 }
 
 int convertFromUI(int min, int max, int value){
-
     int retVal = (((max-min) * value)/10 ) + min;
     if(retVal > max){
         return max;
@@ -354,6 +318,7 @@ int convertToUI(int min, int max, int value){
     }
 }
 
+//Interrupt for button controls
 void IRAM_ATTR buttonInt(){
   if(millis() - pressTime < DEBOUNCE){
     return;
@@ -364,47 +329,12 @@ void IRAM_ATTR buttonInt(){
         newScreen = true;
         currentScreen--;
     }
-
   }
   else if(digitalRead(BUTTON_RIGHT)){
     if(currentScreen < NUM_SCREENS-1){
       newScreen = true;
       currentScreen++;
     }
-
   }
 }
-//OSC
-//  wave
-//  pwm
-//  mono/polly
 
-/*
-LFO:
-  wave
-  frq
-  amp
-  pwm
-*/
-
-/*
-ENV:
-  Atk
-  Dec
-  Sus
-  Rel
-*/
-
-/*
-FX:
-  LPF
-  HPF
-  ECO
-*/
-
-/*
-ETC:
-  Sld/Gls
-  None/Note/Pent/blue
-  Major/Minor
-*/
