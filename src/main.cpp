@@ -3,8 +3,21 @@
 #include "waveforms.h"
 #include "UI.h"
 
+//pin definitions
+#define ADC_PIN 36
+
+// lfo defaults
+#define DEFAULT_KEY 65
+#define DEFAULT_AMP 0
+#define DEFAULT_FREQ 5
+#define DEFAULT_DUTY 5
+
+//Timing variables
+#define PRE_SCALER 80 // ABP_CLOCK frequency is 80Mhz, so a prescalar of 80 will make the timing units 1micro second
+#define SAMPLING_PERIOD 45 //sampling period in microseconds
+
 //ADC setup
-uint8_t adc_pins[] = {36};
+uint8_t adc_pins[] = {ADC_PIN};
 uint8_t adc_pins_count = sizeof(adc_pins) / sizeof(uint8_t);
 volatile bool adc_coversion_done = false;
 adc_continuous_data_t *result = NULL;
@@ -23,12 +36,6 @@ void ARDUINO_ISR_ATTR adcComplete() {
   adc_coversion_done = true;
 }
 
-//Timing variables
-#define PRE_SCALER 80 // ABP_CLOCK frequency is 80Mhz, so a prescalar of 80 will make the timing units 1micro second
-// #define SAMPLING_RATE 44 //44kHz
-#define SAMPLING_PERIOD 45 //sampling period in microseconds
-
-// int samplingPeriod = float(1/SAMPLING_RATE) * 1000; //in microseconds
 Oscillator channels[9];
 Strip strip;
 int sampling = 22000;
@@ -74,16 +81,16 @@ void IRAM_ATTR Timer0_ISR()
 }
 
 void setup() {
-  pinMode(36,INPUT);
+  pinMode(ADC_PIN,INPUT);
   Serial.begin(9600);
   setupChannels();
 
   //initial params
   lfo.waveform = TRIANGLE;
-  lfo.amp = 0;
-  lfo.freq = 5;
-  lfo.duty = 5;
-  channels[0].key = 65;
+  lfo.amp = DEFAULT_AMP;
+  lfo.freq = DEFAULT_FREQ;
+  lfo.duty = DEFAULT_DUTY;
+  channels[0].key = DEFAULT_KEY;
 
   makeSineTable();
   setupScreens();
