@@ -8,6 +8,8 @@ uint8_t adc_pins[] = {36};
 uint8_t adc_pins_count = sizeof(adc_pins) / sizeof(uint8_t);
 volatile bool adc_coversion_done = false;
 adc_continuous_data_t *result = NULL;
+
+// Musical scales for slide strip
 int majorScale[] = {2,2,1,2,2,2,1};
 int majorScale2[] = {0,2,4,5,7,9,11,12};
 int minorScale[] = {2,2,2,1,2,2,1};
@@ -17,15 +19,9 @@ int pentaMinor[] = {0,3,5,7,10,12};
 
 bool mono = false;
 
-
-
-
-
 void ARDUINO_ISR_ATTR adcComplete() {
   adc_coversion_done = true;
 }
-
-
 
 //Timing variables
 #define PRE_SCALER 80 // ABP_CLOCK frequency is 80Mhz, so a prescalar of 80 will make the timing units 1micro second
@@ -35,10 +31,6 @@ void ARDUINO_ISR_ATTR adcComplete() {
 // int samplingPeriod = float(1/SAMPLING_RATE) * 1000; //in microseconds
 Oscillator channels[9];
 Strip strip;
-
-
-// put function declarations here:
-
 int sampling = 22000;
 int potPin = 35;
 
@@ -47,23 +39,21 @@ int modChange = 0;
 float shiftCounter = 0;
 int lastTime = 0;
 
-
-
-
-u_int8_t calculateWave(Oscillator &channel);
-
 // Modifications that apply to all channels
 LFO lfo;
 Envelope envelope;
 GlobalVals globalVals;
 
 void setupChannels();
+u_int8_t calculateWave(Oscillator &channel);
 
 //envelope and amplitude
 uint8_t mixer(int numActive);
 void attack(Oscillator &channel);
 void decay(Oscillator &channel);
 void release(Oscillator &channel);
+
+
 void resetChannel(Oscillator &channel);
 int calculateGliss(int val);
 void setupScreens();
@@ -71,19 +61,11 @@ void attachVar(Screen &screen,int pos,int *var,int min,int max);
 
 bool CALC_FLAG = false;
 bool loopStart = false;
-
 u_int8_t sig = 0;
 int offCount = 0;
-
-
-
 hw_timer_t *Timer0_Cfg = NULL;
 
-
 wave waves[] = {squareWave,triangle,sawtooth,sinWaveTable};
-
-//linking variables with UI
-
 
 void IRAM_ATTR Timer0_ISR()
 {
@@ -91,14 +73,9 @@ void IRAM_ATTR Timer0_ISR()
   dacWrite(DAC1,sig);
 }
 
-
-
 void setup() {
   pinMode(36,INPUT);
   Serial.begin(9600);
-
-
-
   setupChannels();
 
   //initial params
@@ -113,14 +90,14 @@ void setup() {
   setupUI();
   setupTask();
 
-
+  // Setup Continuous ADC read
   analogContinuous(adc_pins, adc_pins_count, 1, 20000, &adcComplete);
   analogContinuousStart();
+  
   //setup timer
   Timer0_Cfg = timerBegin(1000000); //1MHz
   timerAttachInterrupt(Timer0_Cfg, &Timer0_ISR);
   timerAlarm(Timer0_Cfg, SAMPLING_PERIOD, true,0);
- 
 }
 
 void loop() {
@@ -133,11 +110,11 @@ void loop() {
         val = strip.currentVal;
         offCount++;
       }
-
     }
     else{
       offCount = 0;
     }
+    
     if(abs(strip.currentVal - val) > 40){
       if(strip.currentOut == 0){
         channels[0].state = ATTACKING;
@@ -153,25 +130,20 @@ void loop() {
 
       strip.currentVal = val;
       strip.currentOut = out;
-
     }
-
     adc_coversion_done = false;
   }
 
   if(!CALC_FLAG){
-    
     getMidi();
-
-
     int numActive = 0;
+    
     //Calculate all active channels
     for(int i = 0; i < NUM_CHANNELS; i++){
       if(channels[i].state != INACTIVE){
         channels[i].currentTime+=SAMPLING_PERIOD;
         if(channels[i].state == ATTACKING){
           attack(channels[i]);
-
         }
         else if(channels[i].state == DECAYING){
           decay(channels[i]);
@@ -188,19 +160,10 @@ void loop() {
 
     updateUI();
     CALC_FLAG = true;
-
   }
-  
-
-
-
 }
 
-
-
-
 u_int8_t calculateWave(Oscillator &channel){
-
   //calculate modulo
   int modulo = int((waves[lfo.waveform])(lfo.freq,lfo.amp,lfo.duty,channel.currentTime));
   modulo -= (lfo.amp/2); // decrease modulo to be above and below 0
@@ -213,7 +176,6 @@ u_int8_t calculateWave(Oscillator &channel){
   channel.output = (waves[globalVals.waveform])(channel.freq,channel.amp,globalVals.duty,newX);
   
   return 0;
-
 }
 
 void attack(Oscillator &channel){
@@ -254,8 +216,6 @@ void release(Oscillator &channel){
     }
     return;
   }
-
-
 
   if(channel.amp > 0){
     channel.amp -= float(SAMPLING_PERIOD * channel.relAmp)/(envelope.release*1000);
@@ -309,29 +269,24 @@ void setupChannels(){
     // Channel newChannel;
     Oscillator newOcilator;
 
-    
     //Ocilator
     newOcilator.freq = 440;
     newOcilator.amp = 0;
     newOcilator.duty = 0.5;
     *(newOcilator.waveform) = squareWave;
-
     newOcilator.currentTime = 0;
     newOcilator.shiftCounter = 0;
     newOcilator.state = INACTIVE;
     newOcilator.key = 0;
+    
     // Add channel to list
     channels[i] = newOcilator;
   }
-
   strip.mode = 0;
   strip.numNotes = 10;
   strip.spacing = 20;
   strip.currentVal = 0;
   strip.currentOut = 0;
-
-
-
 }
 
 void resetChannel(Oscillator &channel){
@@ -355,22 +310,18 @@ int calculateGliss(int val){
     int noteNum = val/noteSection;
     int note = channels[0].key + ((noteNum/5)*12) + pentaMinor[noteNum % 5];
     return noteToF(note);
-
-    
   }
   else{
     return 0;
   }
-  
 }
+
 void attachVar(Screen &screen,int pos,int *var,int min,int max){
   screen.vars[pos] = var;
   screen.min[pos] = min;
   screen.max[pos] = max;
 }
 void setupScreens(){
-
-  
   //Oscillator screen
   attachVar(OSCscr,0,&globalVals.waveform,0,4);
   attachVar(OSCscr,1,&globalVals.ampMax,0,255);
@@ -387,5 +338,4 @@ void setupScreens(){
   attachVar(ENVscr,1,&envelope.decay,0,3000);
   attachVar(ENVscr,2,&envelope.sustain,0,255);
   attachVar(ENVscr,3,&envelope.release,0,3000);
-
 }
