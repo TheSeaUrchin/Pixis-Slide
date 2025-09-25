@@ -10,6 +10,7 @@ Repository for my Embedded Musical Synthesis Project. The Pixis Slide is an 8 bi
 - Adjustable Low Frequency Oscillator
 - Envelope Generator
 - Pentatonic Scale Slide strip
+- Compatibility with USB Midi Devices
 - User friendly UI
 
 ## Housing Drawings:
