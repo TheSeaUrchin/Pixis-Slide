@@ -30,7 +30,7 @@ void ARDUINO_ISR_ATTR adcComplete() {
 //Timing variables
 #define PRE_SCALER 80 // ABP_CLOCK frequency is 80Mhz, so a prescalar of 80 will make the timing units 1micro second
 // #define SAMPLING_RATE 44 //44kHz
-#define SAMPLING_PERIOD 45 //sampling period in microseconds
+#define SAMPLING_PERIOD 60 //sampling period in microseconds
 
 // int samplingPeriod = float(1/SAMPLING_RATE) * 1000; //in microseconds
 Oscillator channels[9];
@@ -39,7 +39,6 @@ Strip strip;
 
 // put function declarations here:
 
-int sampling = 22000;
 int potPin = 35;
 
 int modulo = 0;
@@ -248,10 +247,8 @@ void decay(Oscillator &channel){
 
 void release(Oscillator &channel){
   if(envelope.release == 0){ 
-    if(channel.output == 0){
-      channel.amp = 0;
-      resetChannel(channel);
-    }
+    channel.amp = 0;
+    resetChannel(channel);
     return;
   }
 
@@ -338,6 +335,7 @@ void resetChannel(Oscillator &channel){
   channel.shiftCounter = 0;
   channel.currentTime = 0;
   channel.state = INACTIVE;
+  Serial.println("Channel Reset");
 }
 
 int calculateGliss(int val){

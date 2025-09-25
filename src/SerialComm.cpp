@@ -44,6 +44,8 @@ void mainTask(void *params){
     else{
         usbConnected = true;
     }
+    Serial.print("USB Connected:");
+    Serial.println(usbConnected);
 
 
     while(true){
@@ -74,7 +76,7 @@ void mainTask(void *params){
 
             }
         }
-        delay(1);
+        delay(2);
         yield(); //Prevent Crash 
     }
 }
