@@ -14,15 +14,14 @@ struct logging{
     int key;
     int channelNum;
     struct logging *next;
-
 };
+
 struct logging *keyLogHead = (struct logging *)malloc(sizeof(struct logging));
 struct logging *keyLog = keyLogHead;
 int logLen = 0;
 
 SemaphoreHandle_t xMutex = NULL;
 extern bool mono;
-
 
 MidiQueue midiQueue = MidiQueue();
 void interpertMidi(uint8_t bufMidi[4]);
@@ -36,7 +35,6 @@ void mainTask(void *params){
 
     attachInterrupt(BTN_SIDE,buttonISR,RISING);
 
-
     //try to connect to the USB device
     if (Usb.Init() == -1) {
         usbConnected = false;
@@ -46,7 +44,6 @@ void mainTask(void *params){
     }
     Serial.print("USB Connected:");
     Serial.println(usbConnected);
-
 
     while(true){
         if(usbConnected){
@@ -62,7 +59,6 @@ void mainTask(void *params){
                     xSemaphoreGive (xMutex);
                 }
             }
-            
         }
         else if(sequencing){
             if(sequenceNext()){
@@ -72,8 +68,6 @@ void mainTask(void *params){
                 xSemaphoreTake (xMutex, portMAX_DELAY);
                 midiQueue.add(bufMidi);
                 xSemaphoreGive (xMutex);
-
-
             }
         }
         delay(2);
@@ -94,14 +88,11 @@ void setupTask(){
     );
 }
 
-
-
-
 void getMidi(){
     int arrSize = 0;
     xSemaphoreTake (xMutex, portMAX_DELAY);
-    //Update up to two messages at a time
     
+    //Update up to two messages at a time
     if(midiQueue.size == 0){
         xSemaphoreGive (xMutex);
         return;
@@ -120,7 +111,6 @@ void getMidi(){
     }
     xSemaphoreGive (xMutex);
 
-    
     for(int i = 0; i < arrSize; i++){
         interpertMidi(MidiBuffer[i]);
     }
@@ -128,9 +118,7 @@ void getMidi(){
 
 void interpertMidi(uint8_t bufMidi[4]){
     //Handle Midi Message
-                
     if(bufMidi[0] == NOTE_ON && bufMidi[3] != 0){
-        
         int note = noteToF(bufMidi[2]);
         int channelNum = 0;
 
@@ -157,11 +145,9 @@ void interpertMidi(uint8_t bufMidi[4]){
             keyLog = nextKey;
             logLen++;
         #endif
-
     }
 
     //Some midi Controllers set velocity to 0 to turn off note, checking 3rd byte for velocity
-
     else if(bufMidi[0] == NOTE_OFF || bufMidi[3] == 0){ 
 
         int channelNum = 0;
@@ -219,8 +205,6 @@ void interpertMidi(uint8_t bufMidi[4]){
     }
 }
 
-
-
 int noteToF(int note){
     float n = (float(note)-69)/12;
     return (pow(2,n) * 440);
@@ -254,6 +238,5 @@ void IRAM_ATTR buttonISR(){
     pTime = millis();
     sequencing = true;
     beginSequence();
-    
 }
 
